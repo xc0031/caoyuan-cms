@@ -221,6 +221,53 @@
 			<artifactId>fastjson</artifactId>
 			<version>1.2.28</version>
 		</dependency>
+	<!-- redis和spring整合包 -->
+		<dependency>
+			<groupId>org.springframework.data</groupId>
+			<artifactId>spring-data-redis</artifactId>
+			<version>1.8.7.RELEASE</version>
+		</dependency>
+		<!-- 连接redis -->
+		<dependency>
+			<groupId>redis.clients</groupId>
+			<artifactId>jedis</artifactId>
+			<version>2.9.0</version>
+		</dependency>
+		
+		<!-- kafka和spring的整合包 -->
+		<dependency>
+			<groupId>org.springframework.kafka</groupId>
+			<artifactId>spring-kafka</artifactId>
+			<version>2.2.0.RELEASE</version>
+		</dependency>
+
+		<!-- kafka的依赖包 -->
+		<dependency>
+			<groupId>org.apache.kafka</groupId>
+			<artifactId>kafka_2.10</artifactId>
+			<version>0.8.2.1</version>
+			<exclusions>
+				<exclusion>
+					<artifactId>jmxri</artifactId>
+					<groupId>com.sun.jmx</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>jms</artifactId>
+					<groupId>javax.jms</groupId>
+				</exclusion>
+				<exclusion>
+					<artifactId>jmxtools</artifactId>
+					<groupId>com.sun.jdmk</groupId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<!-- elasticsearch和spring的整合包 -->
+		<dependency>
+			<groupId>org.springframework.data</groupId>
+			<artifactId>spring-data-elasticsearch</artifactId>
+			<version>3.1.2.RELEASE</version>
+		</dependency>
 	</dependencies>
 	<build>
 		<plugins>
@@ -233,17 +280,36 @@
 					<!-- 源文件和目标文件都使用java8 -->
 					<source>1.8</source>
 					<target>1.8</target>
+					<encoding>UTF-8</encoding>
+				</configuration>
+			</plugin>
+			<!-- Tomcat插件：非官方插件，第三方插件，用于启动Web服务。运行命令：tomcat7:run -->
+			<plugin>
+				<groupId>org.apache.tomcat.maven</groupId>
+				<artifactId>tomcat7-maven-plugin</artifactId>
+				<version>2.2</version>
+				<configuration>
+					<!-- 项目端口号 -->
+					<port>80</port>
+					<!-- 项目的访问路径 -->
+					<path>/</path>
+					<!-- get请求中文乱码 -->
+					<uriEncoding>utf-8</uriEncoding>
+					<!-- 配置tomcat虚拟路径 -->
+					<!-- <staticContextPath>/pic</staticContextPath> -->
+					<!-- 配置tomcat物理路径 -->
+					<!-- <staticContextDocbase>d:/pic</staticContextDocbase> -->
 				</configuration>
 			</plugin>
 			<!-- web应用的服务器 -->
 			<plugin>
 				<groupId>org.eclipse.jetty</groupId>
 				<artifactId>jetty-maven-plugin</artifactId>
-				<version>9.3.7.v20160115</version>
+				<version>9.4.22.v20191022</version>
 				<configuration>
 					<httpConnector>
 						<!-- 端口号 -->
-						<port>80</port>
+						<port>8080</port>
 						<!-- 访问路径 -->
 						<host>localhost</host>
 					</httpConnector>
@@ -252,10 +318,10 @@
 							<!-- 虚拟路径 -->
 							<contextPath>/pic/</contextPath>
 							<!-- 物理路径 -->
-							<resourceBase>E:/eclipse_Maven/caoyuan-cms/src/main/webapp/resource/pic</resourceBase>
+							<resourceBase>E:/eclipse_Linux/caoyuan-cms/src/main/webapp/resource/pic</resourceBase>
 						</jettyWebAppContext>
 					</contextHandlers>
-					<!-- 间隔扫描时间 -->
+					<reload>automatic</reload>
 					<scanIntervalSeconds>1</scanIntervalSeconds>
 				</configuration>
 			</plugin>
@@ -265,15 +331,49 @@
 				<artifactId>maven-site-plugin</artifactId>
 				<version>3.7.1</version>
 			</plugin>
-			<!-- 跳过单元测试 -->
+			<!-- install时跳过test测试 -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
 				<version>2.22.1</version>
 				<configuration>
+					<forkMode>once</forkMode>
+					<argLine>-Dfile.encoding=UTF-8</argLine>
 					<skip>true</skip>
 				</configuration>
 			</plugin>
+			<!-- install时导出源码到本地仓库 -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>3.2.0</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
+		<resources>
+			<!-- maven项目中src源代码下的xml等资源文件编译进classes文件夹， 注意：如果没有这个，它会自动搜索resources下是否有mapper.xml文件， 如果没有就会报org.apache.ibatis.binding.BindingException: 
+				Invalid bound statement (not found): com.pet.mapper.PetMapper.selectByPrimaryKey -->
+			<resource>
+				<directory>src/main/java</directory>
+				<includes>
+					<include>**/*.xml</include>
+				</includes>
+			</resource>
+			<!--将resources目录下的配置文件编译进classes文件 -->
+			<resource>
+				<directory>src/main/resources</directory>
+				<includes>
+					<include>**/*.xml</include>
+					<include>**/*.properties</include>
+				</includes>
+			</resource>
+		</resources>
 	</build>
 </project>

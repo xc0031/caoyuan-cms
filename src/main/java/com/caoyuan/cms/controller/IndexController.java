@@ -6,6 +6,7 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -87,93 +88,65 @@ public class IndexController {
 		Thread t6 = null;
 
 		// 查询出左侧栏目
-		t1 = new Thread(new Runnable() {
-			@Override
-			public void run() {
-				List<Channel> channels = channelService.selects();
-				model.addAttribute("channels", channels);
+		t1 = new Thread(() -> {
+			List<Channel> channels = channelService.selects();
+			model.addAttribute("channels", channels);
+		});
 
+		// 热门文章
+		t2 = new Thread(() -> {
+			// 如果栏目为空则默认显示热点
+			if (article.getChannelId() == null) {
+				// 查询热点文章的列表
+				Article hot = new Article();
+				hot.setStatus(1);// 审核过的
+				hot.setHot(1);// 热点文章
+				hot.setDeleted(0);// 未删除
+				hot.setContentType(ArticleEnum.HTML.getCode());
+				PageInfo<Article> info = articleService.selectHot(hot, page, pageSize);
+				model.addAttribute("info", info);
 			}
 		});
 
-		t2 = new Thread(new Runnable() {
-
-			@Override
-			public void run() {
-
-				// 如果栏目为空则默认显示热点
-				if (article.getChannelId() == null) {
-					// 查询热点文章的列表
-					Article hot = new Article();
-					hot.setStatus(1);// 审核过的
-					hot.setHot(1);// 热点文章
-					hot.setDeleted(0);//
-					hot.setContentType(ArticleEnum.HTML.getCode());
-					PageInfo<Article> info = articleService.selects(hot, page, pageSize);
-					model.addAttribute("info", info);
-				}
+		// 分类文章和文章分类
+		t3 = new Thread(() -> {
+			// 显示分类文章
+			if (article.getChannelId() != null) {
+				// 1查询出来栏目下分类
+				List<Category> categorys = categoryService
+						.selectsByChannelId(article.getChannelId());
+				model.addAttribute("categorys", categorys);
+				// 2.显示分类下的文章
+				PageInfo<Article> info = articleService.selects(article, page, pageSize);
+				model.addAttribute("info", info);
 			}
 		});
 
-		t3 = new Thread(new Runnable() {
+		// 右侧边栏显示最新的5遍文章
+		t4 = new Thread(() -> {
+			// 右侧边栏显示最新的5遍文章
+			Article lastArticle = new Article();
+			lastArticle.setStatus(1);// 审核通过的
+			lastArticle.setDeleted(0);
+			lastArticle.setContentType(ArticleEnum.HTML.getCode());
+			PageInfo<Article> lastInfo = articleService.selectLast(lastArticle, 1, 5);
+			model.addAttribute("lastInfo", lastInfo);
 
-			@Override
-			public void run() {
-				// 显示分类文章
-				if (article.getChannelId() != null) {
-					// 1查询出来栏目下分类
-					List<Category> categorys = categoryService
-							.selectsByChannelId(article.getChannelId());
-					model.addAttribute("categorys", categorys);
-					// 2.显示分类下的文章
-					PageInfo<Article> info = articleService.selects(article, page,
-							pageSize);
-					model.addAttribute("info", info);
-				}
-			}
 		});
-		t4 = new Thread(new Runnable() {
-
-			@Override
-			public void run() {
-
-				// 右侧边栏显示最新的5遍文章
-
-				Article lastArticle = new Article();
-				lastArticle.setStatus(1);// 审核通过的
-				lastArticle.setDeleted(0);
-				lastArticle.setContentType(ArticleEnum.HTML.getCode());
-				;//
-				PageInfo<Article> lastInfo = articleService.selects(lastArticle, 1, 5);
-				model.addAttribute("lastInfo", lastInfo);
-
-			}
-		});
-
-		t5 = new Thread(new Runnable() {
-
-			@Override
-			public void run() {
-				// 右侧边栏显示最新的5遍文章
-
-				Article picArticle = new Article();
-				picArticle.setStatus(1);// 审核通过的
-				picArticle.setDeleted(0);
-				picArticle.setContentType(ArticleEnum.IMAGE.getCode());
-				PageInfo<Article> picInfo = articleService.selects(picArticle, 1, 5);
-				model.addAttribute("picInfo", picInfo);
-
-			}
-		});
-
 		// 查询出图片集
-		t6 = new Thread(new Runnable() {
-			@Override
-			public void run() {
-				PageInfo<Links> info = linksService.selects(1, 10);
-				model.addAttribute("linksInfo", info);
+		t5 = new Thread(() -> {
+			Article picArticle = new Article();
+			picArticle.setStatus(1);// 审核通过的
+			picArticle.setDeleted(0);
+			picArticle.setContentType(ArticleEnum.IMAGE.getCode());
+			PageInfo<Article> picInfo = articleService.selects(picArticle, 1, 5);
+			model.addAttribute("picInfo", picInfo);
+		});
 
-			}
+		// 友情链接
+		t6 = new Thread(() -> {
+			PageInfo<Links> info = linksService.selects(1, 10);
+			model.addAttribute("linksInfo", info);
 		});
 
 		// 封装查询条件
@@ -249,15 +222,15 @@ public class IndexController {
 		ArticleWithBLOBs article = articleService.selectByPrimaryKey(id);
 
 		String string = article.getContent();
-//		System.out.println(string);
-//		ArrayList<ArticleVO> list = new ArrayList<ArticleVO>();
-//		Gson gson = new Gson();
-//		JsonArray array = new JsonParser().parse(string).getAsJsonArray();
-//		for (JsonElement jsonElement : array) {
-//			// 把json转为java
-//			ArticleVO vo = gson.fromJson(jsonElement, ArticleVO.class);
-//			list.add(vo);
-//		}
+		// System.out.println(string);
+		// ArrayList<ArticleVO> list = new ArrayList<ArticleVO>();
+		// Gson gson = new Gson();
+		// JsonArray array = new JsonParser().parse(string).getAsJsonArray();
+		// for (JsonElement jsonElement : array) {
+		// // 把json转为java
+		// ArticleVO vo = gson.fromJson(jsonElement, ArticleVO.class);
+		// list.add(vo);
+		// }
 		List<ArticleVO> list = JSON.parseArray(string, ArticleVO.class);
 		model.addAttribute("title", article.getTitle());// 标题
 		model.addAttribute("list", list);// 标题包含的 图片的地址和描述
@@ -290,5 +263,4 @@ public class IndexController {
 		return ResultUtil.success();
 	}
 
-	
 }

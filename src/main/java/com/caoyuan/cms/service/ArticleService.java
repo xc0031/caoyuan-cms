@@ -31,4 +31,26 @@ public interface ArticleService {
 	 * @return: boolean
 	 */
 	 boolean insertSelective(ArticleWithBLOBs record);
+
+	/** 
+	 * 	最新文章
+	 * @Title: selectLast 
+	 * @param article
+	 * @param page
+	 * @param pageSize
+	 * @return
+	 * @return: PageInfo<Article>
+	 */
+	PageInfo<Article> selectLast(Article article, Integer page, Integer pageSize);
+
+	/** 
+	 * 	热门文章,重点在替换redis后,设置页码
+	 * @Title: selectHot 
+	 * @param article
+	 * @param page
+	 * @param pageSize
+	 * @return
+	 * @return: PageInfo<Article>
+	 */
+	PageInfo<Article> selectHot(Article article, Integer page, Integer pageSize);
 }

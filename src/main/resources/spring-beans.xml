@@ -8,24 +8,17 @@
 		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
 		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
 		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd">
-
-
-
 	<!-- 1、注解扫描器 -->
-	<context:component-scan base-package="com.caoyuan.cms" >
+	<context:component-scan base-package="com.caoyuan.cms">
 		<!-- 排除要要扫描的controller -->
 		<context:exclude-filter type="annotation"
 			expression="org.springframework.stereotype.Controller" />
-
 	</context:component-scan>
-
 	<!--2、 指定外部属性文件的位置 -->
 	<context:property-placeholder
-		location="classpath:db.properties" />
-
+		location="classpath:db.properties,classpath:redis.properties" />
 	<!-- 3.使用druid数据源 连接池 -->
-	<bean id="dataSource" 
-		class="com.alibaba.druid.pool.DruidDataSource">
+	<bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource">
 		<property name="driverClassName" value="${jdbc.driver}">
 		</property>
 		<property name="url" value="${jdbc.url}">
@@ -35,28 +28,21 @@
 		<property name="password" value="${jdbc.password}">
 		</property>
 	</bean>
-
-
 	<!--4、 配置mybatis SqlSessionFactory -->
-	<bean id="sqlSessionFactory"
-		class="org.mybatis.spring.SqlSessionFactoryBean" scope="singleton" autowire="default">
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean"
+		scope="singleton" autowire="default">
 		<!-- 注入数据源 -->
 		<property name="dataSource" ref="dataSource"></property>
 		<!-- 关联mybatis配置文件 -->
 		<property name="configLocation" value="classpath:mybatis.xml"></property>
 	</bean>
-
 	<!--5、 配置jdbc事务管理器 -->
 	<bean id="transactionManager"
 		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
 		<property name="dataSource" ref="dataSource"></property>
 	</bean>
-
-
-
 	<!--6、 配置事务 transaction-manager:表示关联的事务管理器是谁 -->
-	<tx:advice transaction-manager="transactionManager"
-		id="txAdvice">
+	<tx:advice transaction-manager="transactionManager" id="txAdvice">
 		<!-- 事务属性配置 -->
 		<tx:attributes>
 			<!-- 以find.select get开头的方法为只读事务，用来提高数据库的性能 -->
@@ -72,19 +58,16 @@
 	<!-- 7、配置aop -->
 	<aop:config>
 		<!-- 配置切点表达式 -->
-		<aop:pointcut
-			expression="execution(* com.caoyuan.cms.service.impl.*.*(..))" id="pointcut" />
+		<aop:pointcut expression="execution(* com.caoyuan.cms.service.impl.*.*(..))"
+			id="pointcut" />
 		<!-- 关联事务 -->
 		<aop:advisor advice-ref="txAdvice" pointcut-ref="pointcut" />
-
 	</aop:config>
-
 	<!--8 扫描mapper -->
-
 	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
 		<!-- basePackage :mapper接口所在的包 -->
 		<property name="basePackage" value="com.caoyuan.cms.dao"></property>
-
 	</bean>
-
+	<!-- 导入redis -->
+	<import resource="spring-redis.xml"/>
 </beans>
