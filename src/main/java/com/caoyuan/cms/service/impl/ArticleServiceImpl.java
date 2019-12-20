@@ -30,6 +30,10 @@ public class ArticleServiceImpl implements ArticleService {
 	@Resource
 	private RedisTemplate<String, Article> redisTemplate;
 
+	/**
+	 * 	管理员与用户界面的查询的文章/图片集列表
+	 * 	还有首页非热门文章也是不存redis中的(目前无法解决)
+	 */
 	@Override
 	public PageInfo<Article> selects(Article article, Integer page, Integer pageSize) {
 		PageHelper.startPage(page, pageSize);
@@ -38,29 +42,43 @@ public class ArticleServiceImpl implements ArticleService {
 	}
 
 	/**
+	 * 	图片集,存5个
+	 */
+	@Override
+	public PageInfo<Article> selectPic(Article article, Integer page, Integer pageSize) {
+		ListOperations<String, Article> opsForList = redisTemplate.opsForList();
+		List<Article> articles = null;
+		if (redisTemplate.hasKey("pic_article")) {
+			// 如果有对应的键，则直接从redis中获取数据
+			// 获取数据
+			articles = opsForList.range("pic_article", 0, -1);
+		} else {
+			// 如果没有对应的键
+			// 从mysql中获取数据
+			PageHelper.startPage(page, pageSize);
+			articles = articleMapper.selects(article);
+			// 获取完数据以后，存入redis中
+			opsForList.rightPushAll("pic_article", articles);
+		}
+		return new PageInfo<Article>(articles);
+	}
+
+	/**
 	 * 最新文章
 	 */
 	@Override
 	public PageInfo<Article> selectLast(Article article, Integer page, Integer pageSize) {
-		// 第一次访问的时候，redis中没有数据，从mysql数据库中获取数据
-		// 怎么判断是第一次访问？
-		// 直接查看redis中有没有对应的数据，如果没有，则为第一次访问
-		// 之后再次访问时，直接从redis中获取数据
-
-		// 获取List类型的操作对象
 		ListOperations<String, Article> opsForList = redisTemplate.opsForList();
 		List<Article> articles = null;
 		if (redisTemplate.hasKey("last_article")) {
 			// 如果有对应的键，则直接从redis中获取数据
 			// 获取数据
 			articles = opsForList.range("last_article", 0, -1);
-
 		} else {
 			// 如果没有对应的键
 			// 从mysql中获取数据
 			PageHelper.startPage(page, pageSize);
 			articles = articleMapper.selects(article);
-
 			// 获取完数据以后，存入redis中
 			opsForList.rightPushAll("last_article", articles);
 		}
@@ -77,40 +95,30 @@ public class ArticleServiceImpl implements ArticleService {
 	 */
 	@Override
 	public PageInfo<Article> selectHot(Article article, Integer page, Integer pageSize) {
-		// 第一次访问的时候，redis中没有数据，从mysql数据库中获取数据
-		// 怎么判断是第一次访问？
-		// 直接查看redis中有没有对应的数据，如果没有，则为第一次访问
-		// 之后再次访问时，直接从redis中获取数据
-
-		// 获取List类型的操作对象
 		ListOperations<String, Article> opsForList = redisTemplate.opsForList();
-		PageInfo<Article> pageInfo = null;
-		if (redisTemplate.hasKey("hot_article")) {
-			// 如果有对应的键，则直接从redis中获取数据
-			// 获取数据
-			List<Article> articles = opsForList.range("hot_article",
-					(page - 1) * pageSize, page * pageSize - 1);
-			// 获取数据条数
-			Long size = opsForList.size("hot_article");
-			// 使用pagehelper插件提供的page分页类,传入pageNum和pageSize
-			Page<Article> pages = new Page<Article>(page, pageSize);
-			// page继承了ArrayList,传入数据
-			pages.addAll(articles);
-			// 传入总条数
-			pages.setTotal(size);
-			// 放入pageInfo设置数据,为了使用页码导航,第二个参数是页码个数
-			pageInfo = new PageInfo<Article>(pages, 5);
-		} else {
+		// redis中没的话,先存redis
+		if (!redisTemplate.hasKey("hot_article")) {
 			// 如果没有对应的键
 			// 从mysql中获取所有热门文章的数据
 			List<Article> all_articles = articleMapper.selects(article);
 			// 获取全部数据以后，存入redis中
 			opsForList.rightPushAll("hot_article", all_articles);
-			// 获取分页数据，显示出来
-			PageHelper.startPage(page, pageSize);
-			// 设置数据
-			pageInfo = new PageInfo<Article>(articleMapper.selects(article),5);
 		}
+		// 如果有对应的键，则直接从redis中获取数据
+		// 获取数据
+		List<Article> articles = opsForList.range("hot_article", (page - 1) * pageSize,
+				page * pageSize - 1);
+		// 获取数据条数
+		Long size = opsForList.size("hot_article");
+		// 使用pagehelper插件提供的page分页类,传入pageNum和pageSize
+		Page<Article> pages = new Page<Article>(page, pageSize);
+		// page继承了ArrayList,传入数据
+		pages.addAll(articles);
+		// 传入总条数
+		pages.setTotal(size);
+		// 放入pageInfo设置数据,为了使用页码导航,第二个参数是页码个数
+		PageInfo<Article> pageInfo = new PageInfo<Article>(pages, 5);
+
 		return pageInfo;
 	}
 
@@ -124,11 +132,13 @@ public class ArticleServiceImpl implements ArticleService {
 				// 审核文章通过以后，要清空redis中对应的数据
 				// 清空redis
 				if (article.getHot() != null) {
-					//只删除热门文章的redis数据
+					// 热门操作
 					redisTemplate.delete("hot_article");
-				}else {
-					//只删除最新文章的redis数据
+				} else {
+					// 非热门操作,只能全部清除
 					redisTemplate.delete("last_article");
+					redisTemplate.delete("pic_article");
+					redisTemplate.delete("hot_article");
 				}
 			}
 			return result > 0;

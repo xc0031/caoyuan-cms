@@ -1,5 +1,7 @@
 package com.caoyuan.cms.service;
 
+import java.util.List;
+
 import com.caoyuan.cms.domain.Links;
 import com.github.pagehelper.PageInfo;
 /**
@@ -24,5 +26,5 @@ public interface LinksService {
 	 * @return
 	 * @return: List<Links>
 	 */
-   PageInfo<Links> selects(Integer page,Integer pageSize);
+	PageInfo<Links> selects(Integer page,Integer pageSize);
 }

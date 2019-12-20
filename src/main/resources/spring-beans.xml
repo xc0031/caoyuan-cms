@@ -70,4 +70,6 @@
 	</bean>
 	<!-- 导入redis -->
 	<import resource="spring-redis.xml"/>
+	<!-- 导入kafka -->
+	<import resource="spring-kafka-*.xml"/>
 </beans>

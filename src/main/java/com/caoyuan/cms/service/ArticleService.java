@@ -12,12 +12,12 @@ public interface ArticleService {
 
 	/**
 	 * @Title: selects 
-	 * @Description: 文章列表
+	 * @Description: 图片集列表
 	 * @param article
 	 * @return
 	 * @return: List<Article>
 	 */
-	PageInfo<Article> selects(Article article,Integer page,Integer pageSize);
+	PageInfo<Article> selectPic(Article article,Integer page,Integer pageSize);
 
 	boolean  update(ArticleWithBLOBs article);
 	
@@ -53,4 +53,14 @@ public interface ArticleService {
 	 * @return: PageInfo<Article>
 	 */
 	PageInfo<Article> selectHot(Article article, Integer page, Integer pageSize);
+
+	/** 
+	 * @Title: selects 
+	 * @param article
+	 * @param page
+	 * @param pageSize
+	 * @return
+	 * @return: PageInfo<Article>
+	 */
+	PageInfo<Article> selects(Article article, Integer page, Integer pageSize);
 }

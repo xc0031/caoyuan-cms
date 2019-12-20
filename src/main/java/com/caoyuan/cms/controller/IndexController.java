@@ -6,7 +6,6 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -85,7 +84,6 @@ public class IndexController {
 		Thread t3 = null;
 		Thread t4 = null;
 		Thread t5 = null;
-		Thread t6 = null;
 
 		// 查询出左侧栏目
 		t1 = new Thread(() -> {
@@ -105,13 +103,9 @@ public class IndexController {
 				hot.setContentType(ArticleEnum.HTML.getCode());
 				PageInfo<Article> info = articleService.selectHot(hot, page, pageSize);
 				model.addAttribute("info", info);
-			}
-		});
-
-		// 分类文章和文章分类
-		t3 = new Thread(() -> {
-			// 显示分类文章
-			if (article.getChannelId() != null) {
+			} else {
+				// 分类文章和文章分类
+				// 显示分类文章
 				// 1查询出来栏目下分类
 				List<Category> categorys = categoryService
 						.selectsByChannelId(article.getChannelId());
@@ -123,7 +117,7 @@ public class IndexController {
 		});
 
 		// 右侧边栏显示最新的5遍文章
-		t4 = new Thread(() -> {
+		t3 = new Thread(() -> {
 			// 右侧边栏显示最新的5遍文章
 			Article lastArticle = new Article();
 			lastArticle.setStatus(1);// 审核通过的
@@ -134,17 +128,17 @@ public class IndexController {
 
 		});
 		// 查询出图片集
-		t5 = new Thread(() -> {
+		t4 = new Thread(() -> {
 			Article picArticle = new Article();
 			picArticle.setStatus(1);// 审核通过的
 			picArticle.setDeleted(0);
 			picArticle.setContentType(ArticleEnum.IMAGE.getCode());
-			PageInfo<Article> picInfo = articleService.selects(picArticle, 1, 5);
+			PageInfo<Article> picInfo = articleService.selectPic(picArticle, 1, 5);
 			model.addAttribute("picInfo", picInfo);
 		});
 
 		// 友情链接
-		t6 = new Thread(() -> {
+		t5 = new Thread(() -> {
 			PageInfo<Links> info = linksService.selects(1, 10);
 			model.addAttribute("linksInfo", info);
 		});
@@ -157,7 +151,6 @@ public class IndexController {
 		t3.start();
 		t4.start();
 		t5.start();
-		t6.start();
 
 		try {
 			// 让子线程先运行.主线程最后运行.返回首页
@@ -166,14 +159,13 @@ public class IndexController {
 			t3.join();
 			t4.join();
 			t5.join();
-			t6.join();
 
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 
-		// long s2 = System.currentTimeMillis();
-		// System.out.println("首页用时:=============================>" + (s2 - s1));
+		long s2 = System.currentTimeMillis();
+		System.out.println("首页用时:=============================>" + (s2 - s1));
 
 		return "index/index";
 	}

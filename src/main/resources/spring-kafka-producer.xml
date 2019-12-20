@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd">
+
+	<!-- 定义HashMap集合 Key-Value --> <!--参数配置 -->
+	<bean id="producerProperites" class="java.util.HashMap">
+		<constructor-arg>
+			<map><!-- kafka服务地址，可能是集群 value="localhost:9092,localhost:9093,localhost:9094" -->			
+				<entry key="bootstrap.servers" value="192.168.174.128:9092" />				
+				<!-- 有可能导致broker接收到重复的消息 -->
+				<entry key="retries" value="0" />
+				<!-- 每次批量发送消息的数量 -->
+				<entry key="batch.size" value="1638" />
+				<!-- 默认0ms，在异步IO线程被触发后（任何一个topic，partition满都可以触发） -->
+				<entry key="linger.ms" value="1" />
+				<!--producer可以用来缓存数据的内存大小。如果数据产生速度大于向broker发送的速 度，producer会阻塞或者抛出异常 -->
+				<entry key="buffer.memory" value="33554432 " />
+				<!-- key的序列化方式 -->
+				<entry key="key.serializer"
+					value="org.apache.kafka.common.serialization.StringSerializer" />
+				<!-- value的序列化方式 -->
+				<entry key="value.serializer"
+					value="org.apache.kafka.common.serialization.StringSerializer" />
+			</map>
+		</constructor-arg>
+	</bean>
+
+	<!-- 生产工厂对象 -->
+	<bean id="producerFactory"
+		class="org.springframework.kafka.core.DefaultKafkaProducerFactory">
+		<constructor-arg ref="producerProperites" />
+	</bean>
+	<!-- 创建kafka的模板对象 -->
+	<bean id="kafkaTemplate"
+		class="org.springframework.kafka.core.KafkaTemplate">
+		<constructor-arg ref="producerFactory" />
+		<!--设置对应topic -->
+		<property name="defaultTopic" value="1707e" />
+	</bean>
+</beans>
