@@ -32,6 +32,7 @@ import com.caoyuan.cms.utils.ArticleEnum;
 import com.caoyuan.cms.utils.Result;
 import com.caoyuan.cms.utils.ResultUtil;
 import com.caoyuan.cms.vo.ArticleVO;
+import com.cy.util.StringUtil;
 import com.github.pagehelper.PageInfo;
 
 /**
@@ -72,7 +73,7 @@ public class IndexController {
 	@RequestMapping(value = { "", "/", "index" })
 	public String index(Article article, Model model,
 			@RequestParam(defaultValue = "1") Integer page,
-			@RequestParam(defaultValue = "5") Integer pageSize) {
+			@RequestParam(defaultValue = "5") Integer pageSize, String key) {
 		// 访问方法开始时间
 		long s1 = System.currentTimeMillis();
 
@@ -93,26 +94,37 @@ public class IndexController {
 
 		// 热门文章
 		t2 = new Thread(() -> {
-			// 如果栏目为空则默认显示热点
-			if (article.getChannelId() == null) {
-				// 查询热点文章的列表
-				Article hot = new Article();
-				hot.setStatus(1);// 审核过的
-				hot.setHot(1);// 热点文章
-				hot.setDeleted(0);// 未删除
-				hot.setContentType(ArticleEnum.HTML.getCode());
-				PageInfo<Article> info = articleService.selectHot(hot, page, pageSize);
+			// 判断中间区域是高亮搜索还是热门
+			if (StringUtil.hasText(key)) {
+				// 如果搜索条件不为空，则查询es，进行高亮显示
+				PageInfo<Article> info = articleService.selectEs(key, page,pageSize);
 				model.addAttribute("info", info);
+				model.addAttribute("key", key);
 			} else {
-				// 分类文章和文章分类
-				// 显示分类文章
-				// 1查询出来栏目下分类
-				List<Category> categorys = categoryService
-						.selectsByChannelId(article.getChannelId());
-				model.addAttribute("categorys", categorys);
-				// 2.显示分类下的文章
-				PageInfo<Article> info = articleService.selects(article, page, pageSize);
-				model.addAttribute("info", info);
+				// 如果搜索条件为空，则显示热门文章
+				// 如果栏目为空则默认显示热点
+				if (article.getChannelId() == null) {
+					// 查询热点文章的列表
+					Article hot = new Article();
+					hot.setStatus(1);// 审核过的
+					hot.setHot(1);// 热点文章
+					hot.setDeleted(0);// 未删除
+					hot.setContentType(ArticleEnum.HTML.getCode());
+					PageInfo<Article> info = articleService.selectHot(hot, page,
+							pageSize);
+					model.addAttribute("info", info);
+				} else {
+					// 分类文章和文章分类
+					// 显示分类文章
+					// 1查询出来栏目下分类
+					List<Category> categorys = categoryService
+							.selectsByChannelId(article.getChannelId());
+					model.addAttribute("categorys", categorys);
+					// 2.显示分类下的文章
+					PageInfo<Article> info = articleService.selects(article, page,
+							pageSize);
+					model.addAttribute("info", info);
+				}
 			}
 		});
 

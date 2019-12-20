@@ -72,4 +72,6 @@
 	<import resource="spring-redis.xml"/>
 	<!-- 导入kafka -->
 	<import resource="spring-kafka-*.xml"/>
+	<!-- 导入es -->
+	<import resource="spring-es.xml"/>
 </beans>

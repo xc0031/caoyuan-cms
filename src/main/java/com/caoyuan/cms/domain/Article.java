@@ -2,11 +2,15 @@ package com.caoyuan.cms.domain;
 
 import java.io.Serializable;
 import java.util.Date;
+
+import org.springframework.data.annotation.Id;
+import org.springframework.data.elasticsearch.annotations.Document;
 /**
  * @ClassName:   Article
  * @author:	            曹原
  * @date: 		 2019年11月24日 下午7:00:34
  */
+@Document(indexName="cms" , type="article")
 public class Article implements Serializable{
     /**
 	 * @fieldName: serialVersionUID
@@ -14,7 +18,7 @@ public class Article implements Serializable{
 	 * @Description: TODO
 	 */
 	private static final long serialVersionUID = -8268525178398404195L;
-
+	@Id
 	private Integer id;
 
     private String title;

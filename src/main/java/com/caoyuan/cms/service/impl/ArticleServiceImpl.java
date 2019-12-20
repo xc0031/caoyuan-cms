@@ -1,9 +1,13 @@
 package com.caoyuan.cms.service.impl;
 
+import java.util.Arrays;
 import java.util.List;
 
 import javax.annotation.Resource;
 
+import org.springframework.data.elasticsearch.core.ElasticsearchTemplate;
+import org.springframework.data.elasticsearch.core.aggregation.AggregatedPage;
+import org.springframework.data.elasticsearch.core.query.IndexQuery;
 import org.springframework.data.redis.core.ListOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -11,8 +15,12 @@ import org.springframework.stereotype.Service;
 import com.caoyuan.cms.dao.ArticleMapper;
 import com.caoyuan.cms.domain.Article;
 import com.caoyuan.cms.domain.ArticleWithBLOBs;
+import com.caoyuan.cms.domain.Category;
+import com.caoyuan.cms.domain.Channel;
+import com.caoyuan.cms.domain.User;
 import com.caoyuan.cms.service.ArticleService;
 import com.caoyuan.cms.utils.AjaxException;
+import com.caoyuan.cms.utils.ESUtils;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
@@ -29,6 +37,26 @@ public class ArticleServiceImpl implements ArticleService {
 
 	@Resource
 	private RedisTemplate<String, Article> redisTemplate;
+
+	@Resource
+	private ElasticsearchTemplate elasticsearchTemplate;
+
+	/**
+	 * 	Es高亮搜索,显示在热门那里
+	 */
+	@Override
+	public PageInfo<Article> selectEs(String key, Integer page, Integer pageSize) {
+		Class[] classes = { User.class, Category.class, Channel.class };
+		AggregatedPage<Article> selectObjects = ESUtils.selectObjects(
+				elasticsearchTemplate, Article.class, Arrays.asList(classes), page,
+				pageSize, "id", new String[] { "title" }, key);
+		List<Article> content = selectObjects.getContent();
+		long totalElements = selectObjects.getTotalElements();
+		Page<Article> page2 = new Page<Article>(page, pageSize);
+		page2.addAll(content);
+		page2.setTotal(totalElements);
+		return new PageInfo<Article>(page2, 5);
+	}
 
 	/**
 	 * 	管理员与用户界面的查询的文章/图片集列表
@@ -122,6 +150,9 @@ public class ArticleServiceImpl implements ArticleService {
 		return pageInfo;
 	}
 
+	/**
+	 * 	管理员审核/删除/热门
+	 */
 	@Override
 	public boolean update(ArticleWithBLOBs article) {
 		try {
@@ -139,6 +170,19 @@ public class ArticleServiceImpl implements ArticleService {
 					redisTemplate.delete("last_article");
 					redisTemplate.delete("pic_article");
 					redisTemplate.delete("hot_article");
+					// 删除和审核不通过的,都从es里删除
+					if ((article.getDeleted() != null && article.getDeleted() == 1)
+							|| (article.getStatus() != null
+									&& article.getStatus() == -1)) {
+						elasticsearchTemplate.delete(Article.class, article.getId() + "");
+					} else {
+						// 恢复正常的和审核通过的,都添加进es中
+						IndexQuery query = new IndexQuery();
+						//根据子类中id的值，获取到Article对象的数据,存入完整数据
+						Article article2 = articleMapper.selectByPrimaryKey(article.getId());
+						query.setObject(article2);
+						elasticsearchTemplate.index(query);
+					}
 				}
 			}
 			return result > 0;

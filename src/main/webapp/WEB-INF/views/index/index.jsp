@@ -210,7 +210,7 @@
 	<script type="text/javascript">
 		//分页
 		function goPage(page) {
-			var url = "/?page=" + page + "&channelId=${article.channelId}&categoryId=${article.categoryId}";
+			var url = "/?page=" + page + "&channelId=${article.channelId}&categoryId=${article.categoryId}&key=${key}";
 			location = url;
 		}
 	</script>

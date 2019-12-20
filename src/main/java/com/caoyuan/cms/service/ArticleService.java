@@ -63,4 +63,15 @@ public interface ArticleService {
 	 * @return: PageInfo<Article>
 	 */
 	PageInfo<Article> selects(Article article, Integer page, Integer pageSize);
+
+	/** 
+	 * 	高亮搜索,显示在热门那里
+	 * @Title: selectEs 
+	 * @param key
+	 * @param page
+	 * @param pageSize
+	 * @return
+	 * @return: PageInfo<Article>
+	 */
+	PageInfo<Article> selectEs(String key, Integer page, Integer pageSize);
 }

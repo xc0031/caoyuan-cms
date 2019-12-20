@@ -92,7 +92,7 @@ public class ESUtils {
 	 * @param elasticsearchTemplate 模板对象
 	 * @param clazz	实体类的class对象
 	 * @param classes 实体类中实体类型的成员变量的类的class集合
-	 * @param page	当前页，从0开始
+	 * @param page	当前页，从1开始
 	 * @param pageSize	每页的条数
 	 * @param sortField	根据这个字段进行排序
 	 * @param fieldNames	要搜索的字段名
@@ -103,6 +103,7 @@ public class ESUtils {
 			ElasticsearchTemplate elasticsearchTemplate, Class<T> clazz,
 			List<Class> classes, Integer page, Integer pageSize, String sortField,
 			String fieldNames[], String value) {
+		page = page - 1;
 		AggregatedPage<T> pageInfo = null;
 		logger.info("采用es进行数据库的查询操作开始！！！！！！！！！！！！！！！！！！！！！！！！");
 		// 创建Pageable对象
@@ -178,7 +179,7 @@ public class ESUtils {
 														Object value = searchHit
 																.getSourceAsMap()
 																.get(fieldName);
-														//System.out.println(value);
+														// System.out.println(value);
 														// 获取字段的类型
 														Class<?> type = field.getType();
 														if (type == Date.class) {
