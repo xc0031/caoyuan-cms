@@ -207,4 +207,9 @@ public class ArticleServiceImpl implements ArticleService {
 		}
 	}
 
+	@Override
+	public void updateByPrimaryKeySelective(ArticleWithBLOBs article) {
+		articleMapper.updateByPrimaryKeySelective(article);
+	}
+
 }

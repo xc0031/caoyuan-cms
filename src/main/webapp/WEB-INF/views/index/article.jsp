@@ -78,7 +78,9 @@
 				</c:if>
 			</dd>
 			<dd>
-				<fmt:formatDate value="${aritcle.updated }" pattern="yyyy-MM-dd HH:mm:ss" />
+				<fmt:formatDate value="${article.updated }" pattern="yyyy-MM-dd HH:mm:ss" />
+				&nbsp;&nbsp;&nbsp;&nbsp;
+				<strong>访问量:${article.hits }</strong>
 			</dd>
 			<dd>${article.content }</dd>
 		</dl>

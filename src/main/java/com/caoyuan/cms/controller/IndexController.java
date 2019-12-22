@@ -97,7 +97,7 @@ public class IndexController {
 			// 判断中间区域是高亮搜索还是热门
 			if (StringUtil.hasText(key)) {
 				// 如果搜索条件不为空，则查询es，进行高亮显示
-				PageInfo<Article> info = articleService.selectEs(key, page,pageSize);
+				PageInfo<Article> info = articleService.selectEs(key, page, pageSize);
 				model.addAttribute("info", info);
 				model.addAttribute("key", key);
 			} else {
@@ -195,7 +195,9 @@ public class IndexController {
 			@RequestParam(defaultValue = "3") Integer pageSize, Integer id,
 			HttpServletRequest request) {
 		ArticleWithBLOBs article = articleService.selectByPrimaryKey(id);
-
+		// 点击量+1
+		article.setHits(article.getHits() + 1);
+		articleService.updateByPrimaryKeySelective(article);
 		PageInfo<Comment> commentInfo = commentService.selects(article.getId(), pageNum,
 				pageSize);
 		// 检查当前点击人是否登录.如果登录则根据标题和登录人查询是否收藏该文章
@@ -224,7 +226,9 @@ public class IndexController {
 	public String articlepic(Model model, Integer id) {
 
 		ArticleWithBLOBs article = articleService.selectByPrimaryKey(id);
-
+		// 点击量+1
+		article.setHits(article.getHits() + 1);
+		articleService.updateByPrimaryKeySelective(article);
 		String string = article.getContent();
 		// System.out.println(string);
 		// ArrayList<ArticleVO> list = new ArrayList<ArticleVO>();
