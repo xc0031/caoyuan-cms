@@ -3,6 +3,7 @@ package com.caoyuan.cms.kafka;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 
 import javax.annotation.Resource;
@@ -44,6 +45,17 @@ public class ProducerTest {
 
 	@Test
 	public void testSendMsg() throws FileNotFoundException {
+		// 栏目
+		// 获取所有的栏目，存入list中
+		List<Channel> channels = channelService.selects();
+		// 获取栏目下的种类
+		HashMap<Integer, List<Category>> map = new HashMap<>();
+		for (Channel channel : channels) {
+			List<Category> categories = categoryService
+					.selectsByChannelId(channel.getId());
+			map.put(channel.getId(), categories);
+		}
+
 		// 加载爬虫爬到的文件夹
 		File dir = new File(
 				"E:\\eclipse_Linux\\caoyuan-cms\\src\\main\\webapp\\resource\\xiaoshuo");
@@ -74,17 +86,14 @@ public class ProducerTest {
 			// 是否热门
 			article.setHot(RandomUtil.random(0, 1));
 			// 栏目
-			// 获取所有的栏目，存入list中
-			List<Channel> channels = channelService.selects();
 			// 随机取出来一个
 			Channel channel = channels.get(RandomUtil.random(0, channels.size() - 1));
 			article.setChannelId(channel.getId());
 			// 类别
 			// 获取指定栏目下的类别
-			List<Category> categories = categoryService
-					.selectsByChannelId(channel.getId());
+			List<Category> categories = map.get(channel.getId());
 			// 判断集合是否null或者空元素
-			if (CollectionUtils.isEmpty(categories)) {
+			if (!CollectionUtils.isEmpty(categories)) {
 				Category category = categories
 						.get(RandomUtil.random(0, categories.size() - 1));
 				article.setCategoryId(category.getId());
@@ -96,18 +105,20 @@ public class ProducerTest {
 			article.setUpdated(new Date());
 			// (7)其它的字段随便模拟。
 			// 状态
-			article.setStatus(0);
+			article.setStatus(1);
 			// 删除
 			article.setDeleted(0);
 			// 类型
 			article.setContentType(0);
-			System.out.println(article);
+			// 图片
+			article.setPicture("c924227b-227e-4ca0-b4e0-518633e75706.jpg");
+			System.out.println(article.getId() + "=======>" + article.getTitle());
 			// 转换成json字符串
 			String json = JSON.toJSONString(article);
 			// 发送到kafka
 			kafkaTemplate.sendDefault("article_add", json);
 		}
-
+		System.out.println("文章添加成功");
 	}
 
 }

@@ -30,6 +30,9 @@ import org.springframework.data.elasticsearch.core.query.IndexQueryBuilder;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.data.elasticsearch.core.query.SearchQuery;
 
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageInfo;
+
 /**
  * @ClassName: ESUtils
  * @Description: 
@@ -85,13 +88,36 @@ public class ESUtils {
 		return elasticsearchTemplate.queryForObject(query, clazz);
 	}
 
-	// 查询操作
+	/**
+	 * 	返回分页后的pageInfo 
+	 * @param elasticsearchTemplate 模板对象
+	 * @param clazz	实体类的class对象
+	 * @param classes 实体类中实体类型的成员变量的类的class集合
+	 * @param pageNum	当前页，从1开始
+	 * @param pageSize	每页的条数
+	 * @param sortField	根据这个字段进行排序
+	 * @param fieldNames	要搜索的字段名
+	 * @param value	具体要搜索的数据
+	 * @return
+	 */
+	public static <T> PageInfo<T> select(ElasticsearchTemplate elasticsearchTemplate,
+			Class<T> clazz, List<Class> classes, Integer pageNum, Integer pageSize,
+			String sortField, String fieldNames[], String value) {
+		AggregatedPage<T> selectObjects = selectObjects(elasticsearchTemplate, clazz, classes, pageNum, pageSize, sortField,
+				fieldNames, value);
+		//数据放入page对象,为了使用pageinfo
+		Page<T> page = new Page<>(pageNum, pageSize);
+		page.setTotal(selectObjects.getTotalElements());
+		page.addAll(selectObjects.getContent());
+		return new PageInfo<>(page);
+	}
 
+	// 查询操作
 	/**
 	 * @param elasticsearchTemplate 模板对象
 	 * @param clazz	实体类的class对象
 	 * @param classes 实体类中实体类型的成员变量的类的class集合
-	 * @param page	当前页，从1开始
+	 * @param pageNum	当前页，从1开始
 	 * @param pageSize	每页的条数
 	 * @param sortField	根据这个字段进行排序
 	 * @param fieldNames	要搜索的字段名
@@ -100,14 +126,13 @@ public class ESUtils {
 	 */
 	public static <T> AggregatedPage<T> selectObjects(
 			ElasticsearchTemplate elasticsearchTemplate, Class<T> clazz,
-			List<Class> classes, Integer page, Integer pageSize, String sortField,
+			List<Class> classes, Integer pageNum, Integer pageSize, String sortField,
 			String fieldNames[], String value) {
-		page = page - 1;
 		AggregatedPage<T> pageInfo = null;
 		// logger.info("采用es进行数据库的查询操作开始！！！！！！！！！！！！！！！！！！！！！！！！");
 		System.out.println("采用es进行数据库的查询操作开始！！！！！！！！！！！！！！！！！！！！！！！！");
 		// 创建Pageable对象
-		Pageable pageable = PageRequest.of(page, pageSize,
+		Pageable pageable = PageRequest.of(pageNum - 1, pageSize,
 				Sort.by(Sort.Direction.ASC, sortField));
 		// 查询对象
 		SearchQuery query = null;
@@ -327,7 +352,7 @@ public class ESUtils {
 	 * @param elasticsearchTemplate 模板对象
 	 * @param clazz	实体类的class对象
 	 * @param classes 实体类中实体类型的成员变量的类的class集合
-	 * @param page	当前页，从1开始
+	 * @param pageNum	当前页，从1开始
 	 * @param pageSize	每页的条数
 	 * @param sortField	根据这个字段进行排序
 	 * @param fieldNames	要高亮的字段名
@@ -344,16 +369,15 @@ public class ESUtils {
 	 *  8、matchAllQuery()  全部匹配
 	 * @return
 	 */
-	public static <T> AggregatedPage<T> select(
+	public static <T> AggregatedPage<T> selectAll(
 			ElasticsearchTemplate elasticsearchTemplate, Class<T> clazz,
-			List<Class> classes, Integer page, Integer pageSize, String sortField,
+			List<Class> classes, Integer pageNum, Integer pageSize, String sortField,
 			String fieldNames[], String value, QueryBuilder queryBuilders) {
-		page = page - 1;
 		AggregatedPage<T> pageInfo = null;
 		// logger.info("采用es进行数据库的查询操作开始！！！！！！！！！！！！！！！！！！！！！！！！");
 		System.out.println("采用es进行数据库的查询操作开始！！！！！！！！！！！！！！！！！！！！！！！！");
 		// 创建Pageable对象
-		Pageable pageable = PageRequest.of(page, pageSize,
+		Pageable pageable = PageRequest.of(pageNum - 1, pageSize,
 				Sort.by(Sort.Direction.ASC, sortField));
 		// 查询对象
 		SearchQuery query = null;

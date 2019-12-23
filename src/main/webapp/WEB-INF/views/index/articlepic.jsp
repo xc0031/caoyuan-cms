@@ -22,11 +22,6 @@
 			</dt>
 			<hr>
 			<dd>
-				<fmt:formatDate value="${article.updated }" pattern="yyyy-MM-dd HH:mm:ss" />
-				&nbsp;&nbsp;&nbsp;&nbsp;
-				<strong>访问量:${article.hits }</strong>
-			</dd>
-			<dd>
 				<div>
 					<div id="carouselExampleCaptions" class="carousel slide" data-ride="carousel" style="margin: 0 auto;width: 450px;">
 						<ol class="carousel-indicators">

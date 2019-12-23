@@ -24,14 +24,22 @@ public class KafkaConsumerListener implements MessageListener<String, String> {
 	@Override
 	public void onMessage(ConsumerRecord<String, String> data) {
 		String key = data.key();
+		//添加1000章文章
 		if (key != null && key.equals("article_add")) {
 			String value = data.value();
-
 			// 转换成对象
 			ArticleWithBLOBs article = JSON.parseObject(value, ArticleWithBLOBs.class);
-
 			// 存入mysql数据库
 			articleService.insertSelective(article);
+		}
+		//kafka执行文章点击量+1
+		if (key != null && key.equals("article_updateHits")) {
+			String value = data.value();
+			// 转换成对象
+			int id = Integer.parseInt(value);
+			// 存入mysql数据库
+			articleService.updateHits(id);
+			System.out.println(id + "=====点击量修改成功");
 		}
 	}
 

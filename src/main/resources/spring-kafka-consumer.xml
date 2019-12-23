@@ -10,7 +10,7 @@
 		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
 		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd">
 	<!-- 1、注解扫描器,扫描监听器,@Component -->
-	<context:component-scan base-package="com.caoyuan.cms"></context:component-scan>
+	<!-- <context:component-scan base-package="com.caoyuan.cms"/> -->
 	<!-- 配置HashMap Key-Value键值对 -->
 	<bean id="consumerProperties" class="java.util.HashMap">
 		<constructor-arg>
@@ -43,6 +43,8 @@
 		<constructor-arg value="1707e" />
 		<property name="messageListener" ref="kafkaConsumerListener" />
 	</bean>
+	<!-- 注册监听器对象 -->
+	<bean id="kafkaConsumerListener" class="com.caoyuan.cms.listener.KafkaConsumerListener"/>
 	<!-- 配置conusmerContainer监听对象 -->
 	<bean id="conusmerContainer"
 		class="org.springframework.kafka.listener.KafkaMessageListenerContainer">

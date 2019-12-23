@@ -3,15 +3,12 @@
 PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
 "http://mybatis.org/dtd/mybatis-3-config.dtd">
 <configuration>
-
-<!-- 别名配置 -->
- <typeAliases>
-   <package name="com.caoyuan.cms.domain"/>
- </typeAliases>
- 
- <!-- 配置分页助手拦截器 -->
-<plugins>
- <plugin interceptor="com.github.pagehelper.PageInterceptor"></plugin>
- 
- </plugins>
+	<!-- 别名配置 -->
+	<typeAliases>
+		<package name="com.caoyuan.cms.domain" />
+	</typeAliases>
+	<!-- 配置分页助手拦截器 -->
+	<plugins>
+		<plugin interceptor="com.github.pagehelper.PageInterceptor"></plugin>
+	</plugins>
 </configuration>

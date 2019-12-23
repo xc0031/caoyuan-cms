@@ -54,6 +54,10 @@
 	<sql id="Blob_Column_List">
 		content, summary
 	</sql>
+	<!-- 点击量+1 -->
+	<update id="updateHits">
+		update cms_article set hits = hits+1 where id = #{id}
+	</update>
 	<!-- 查询所有的文章 -->
 	<select id="selects" resultMap="BaseResultMap">
 

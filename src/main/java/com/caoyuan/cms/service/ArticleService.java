@@ -75,11 +75,12 @@ public interface ArticleService {
 	 */
 	PageInfo<Article> selectEs(String key, Integer page, Integer pageSize);
 
+
 	/** 
-	 * 	点击量加一
-	 * @Title: updateByPrimaryKeySelective 
-	 * @param article
+	 * 点击量加一
+	 * @Title: updateHits 
+	 * @param id
 	 * @return: void
 	 */
-	void updateByPrimaryKeySelective(ArticleWithBLOBs article);
+	void updateHits(Integer id);
 }

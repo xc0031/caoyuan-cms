@@ -178,8 +178,9 @@ public class ArticleServiceImpl implements ArticleService {
 					} else {
 						// 恢复正常的和审核通过的,都添加进es中
 						IndexQuery query = new IndexQuery();
-						//根据子类中id的值，获取到Article对象的数据,存入完整数据
-						Article article2 = articleMapper.selectByPrimaryKey(article.getId());
+						// 根据子类中id的值，获取到Article对象的数据,存入完整数据
+						Article article2 = articleMapper
+								.selectByPrimaryKey(article.getId());
 						query.setObject(article2);
 						elasticsearchTemplate.index(query);
 					}
@@ -208,8 +209,8 @@ public class ArticleServiceImpl implements ArticleService {
 	}
 
 	@Override
-	public void updateByPrimaryKeySelective(ArticleWithBLOBs article) {
-		articleMapper.updateByPrimaryKeySelective(article);
+	public void updateHits(Integer id) {
+		articleMapper.updateHits(id);
 	}
 
 }

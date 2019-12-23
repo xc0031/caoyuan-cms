@@ -2,8 +2,11 @@ package com.caoyuan.cms.dao;
 
 import java.util.List;
 
+import org.apache.ibatis.annotations.Param;
+
 import com.caoyuan.cms.domain.Article;
 import com.caoyuan.cms.domain.ArticleWithBLOBs;
+
 /**
  * @ClassName:   ArticleMapper
  * @Description: 
@@ -19,18 +22,26 @@ public interface ArticleMapper {
 	 * @return: List<Article>
 	 */
 	List<Article> selects(Article article);
-	
-    int deleteByPrimaryKey(Integer id);
 
-    int insert(ArticleWithBLOBs record);
+	int deleteByPrimaryKey(Integer id);
 
-    int insertSelective(ArticleWithBLOBs record);
+	int insert(ArticleWithBLOBs record);
 
-    ArticleWithBLOBs selectByPrimaryKey(Integer id);
+	int insertSelective(ArticleWithBLOBs record);
 
-    int updateByPrimaryKeySelective(ArticleWithBLOBs record);
+	ArticleWithBLOBs selectByPrimaryKey(Integer id);
 
-    int updateByPrimaryKeyWithBLOBs(ArticleWithBLOBs record);
+	int updateByPrimaryKeySelective(ArticleWithBLOBs record);
 
-    int updateByPrimaryKey(Article record);
+	int updateByPrimaryKeyWithBLOBs(ArticleWithBLOBs record);
+
+	int updateByPrimaryKey(Article record);
+
+	/** 
+	 * 	修改点击量+1
+	 * @Title: updateHits 
+	 * @param id
+	 * @return: void
+	 */
+	void updateHits(@Param("id") Integer id);
 }

@@ -1,11 +1,15 @@
 package com.caoyuan.cms.controller;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,6 +38,7 @@ import com.caoyuan.cms.utils.ResultUtil;
 import com.caoyuan.cms.vo.ArticleVO;
 import com.cy.util.StringUtil;
 import com.github.pagehelper.PageInfo;
+import com.google.gson.Gson;
 
 /**
  * @ClassName:   IndexController
@@ -58,6 +63,15 @@ public class IndexController {
 
 	@Resource
 	private CommentService commentService;
+
+	@Resource
+	private ThreadPoolTaskExecutor executor;// 开启线程池
+
+	@Resource
+	private RedisTemplate<String, ?> redisTemplate;// 储存点击量的key(string类型)
+
+	@Resource
+	private KafkaTemplate<String, String> kafkaTemplate;// kafka消息队列处理数据库点击量+1
 
 	/**
 	 * 
@@ -195,16 +209,38 @@ public class IndexController {
 			@RequestParam(defaultValue = "3") Integer pageSize, Integer id,
 			HttpServletRequest request) {
 		ArticleWithBLOBs article = articleService.selectByPrimaryKey(id);
-		// 点击量+1
-		article.setHits(article.getHits() + 1);
-		articleService.updateByPrimaryKeySelective(article);
+		// A卷：为CMS系统文章最终页（详情页），每访问一次就同时往文章表的浏览量字段加1，
+		// 如果一篇文章集中一时刻上百万次浏览，就会给数据库造成压力。现在请你利用Redis提高性能，
+		// 当用户浏览文章时，将“Hits_${文章ID}_${用户IP地址}”为key，
+		// 查询Redis里有没有该key，如果有key，则不做任何操作。如果没有，
+		// 则使用Spring线程池异步执行数据库加1操作，并往Redis保存key为Hits_${文章ID}_${用户IP地址}，
+		// value为空值的记录，而且有效时长为5分钟。
+
+		// 获取远程请求对象的ip地址
+		String ip = request.getRemoteAddr();
+		String key = "Hits_" + id + "_" + ip;
+		// 如果redis中没这个key,证明5分钟内这个用户是第一次点击
+		if (!redisTemplate.hasKey(key)) {
+			// 使用Spring线程池
+			executor.execute(() -> {
+				// 点击量+1,这里使用mysql中+1,能避免线程安全问题
+				articleService.updateHits(id);
+				// 在redis中添加key,5分钟内再点击,不计算点击量
+				redisTemplate.opsForValue().set(key, null, 5, TimeUnit.MINUTES);
+				System.out.println(id + "=====点击量修改成功");
+			});
+		}
+		// B卷要求kafka修改点击量+1
+		// kafkaTemplate.sendDefault("article_updateHits", id+"");
+
+		// 评论
 		PageInfo<Comment> commentInfo = commentService.selects(article.getId(), pageNum,
 				pageSize);
 		// 检查当前点击人是否登录.如果登录则根据标题和登录人查询是否收藏该文章
 		HttpSession session = request.getSession(false);
 		if (null != session) {
-			//
 			User user = (User) session.getAttribute("user");
+			// 判断是否收藏
 			int i = collectService.selectByText(article.getTitle(), user);
 			model.addAttribute("isCollect", i);
 		}
@@ -226,19 +262,8 @@ public class IndexController {
 	public String articlepic(Model model, Integer id) {
 
 		ArticleWithBLOBs article = articleService.selectByPrimaryKey(id);
-		// 点击量+1
-		article.setHits(article.getHits() + 1);
-		articleService.updateByPrimaryKeySelective(article);
 		String string = article.getContent();
-		// System.out.println(string);
-		// ArrayList<ArticleVO> list = new ArrayList<ArticleVO>();
-		// Gson gson = new Gson();
-		// JsonArray array = new JsonParser().parse(string).getAsJsonArray();
-		// for (JsonElement jsonElement : array) {
-		// // 把json转为java
-		// ArticleVO vo = gson.fromJson(jsonElement, ArticleVO.class);
-		// list.add(vo);
-		// }
+		System.out.println(string);
 		List<ArticleVO> list = JSON.parseArray(string, ArticleVO.class);
 		model.addAttribute("title", article.getTitle());// 标题
 		model.addAttribute("list", list);// 标题包含的 图片的地址和描述
