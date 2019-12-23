@@ -15,7 +15,7 @@ public class Article implements Serializable{
     /**
 	 * @fieldName: serialVersionUID
 	 * @fieldType: long
-	 * @Description: TODO
+	 * @Description: 
 	 */
 	private static final long serialVersionUID = -8268525178398404195L;
 	@Id

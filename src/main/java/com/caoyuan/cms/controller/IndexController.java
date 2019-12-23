@@ -1,11 +1,17 @@
 package com.caoyuan.cms.controller;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
+import org.springframework.data.elasticsearch.core.ElasticsearchTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,9 +35,11 @@ import com.caoyuan.cms.service.CollectService;
 import com.caoyuan.cms.service.CommentService;
 import com.caoyuan.cms.service.LinksService;
 import com.caoyuan.cms.utils.ArticleEnum;
+import com.caoyuan.cms.utils.ESUtils;
 import com.caoyuan.cms.utils.Result;
 import com.caoyuan.cms.utils.ResultUtil;
 import com.caoyuan.cms.vo.ArticleVO;
+import com.cy.util.StringUtil;
 import com.github.pagehelper.PageInfo;
 
 /**
@@ -57,6 +65,18 @@ public class IndexController {
 
 	@Resource
 	private CommentService commentService;// 评论
+
+	@Resource
+	private ElasticsearchTemplate elasticsearchTemplate;
+
+	@Resource
+	private RedisTemplate<String, ?> redisTemplate;
+
+	@Resource
+	private ThreadPoolTaskExecutor executor;
+	
+	@Resource
+	private KafkaTemplate<String, String> kafkaTemplate;
 
 	/**
 	 * 
@@ -93,27 +113,40 @@ public class IndexController {
 
 		// 热门文章
 		t2 = new Thread(() -> {
-			// 如果搜索条件为空，则显示热门文章
-			// 如果栏目为空则默认显示热点
-			if (article.getChannelId() == null) {
-				// 查询热点文章的列表
-				Article hot = new Article();
-				hot.setStatus(1);// 审核过的
-				hot.setHot(1);// 热点文章
-				hot.setDeleted(0);// 未删除
-				hot.setContentType(ArticleEnum.HTML.getCode());
-				PageInfo<Article> info = articleService.selectHot(hot, page, pageSize);
-				model.addAttribute("info", info);
+			// 判断是否是高亮查询
+			if (StringUtil.hasText(key)) {
+				Class[] classes = new Class[] { User.class, Channel.class,
+						Category.class };
+				PageInfo<Article> pageInfo = ESUtils.select(elasticsearchTemplate,
+						Article.class, Arrays.asList(classes), page, pageSize, "id",
+						new String[] { "title" }, key);
+				model.addAttribute("info", pageInfo);
+				model.addAttribute("key", key);
 			} else {
-				// 分类文章和文章分类
-				// 显示分类文章
-				// 1查询出来栏目下分类
-				List<Category> categorys = categoryService
-						.selectsByChannelId(article.getChannelId());
-				model.addAttribute("categorys", categorys);
-				// 2.显示分类下的文章
-				PageInfo<Article> info = articleService.selects(article, page, pageSize);
-				model.addAttribute("info", info);
+				// 如果搜索条件为空，则显示热门文章
+				// 如果栏目为空则默认显示热点
+				if (article.getChannelId() == null) {
+					// 查询热点文章的列表
+					Article hot = new Article();
+					hot.setStatus(1);// 审核过的
+					hot.setHot(1);// 热点文章
+					hot.setDeleted(0);// 未删除
+					hot.setContentType(ArticleEnum.HTML.getCode());
+					PageInfo<Article> info = articleService.selectHot(hot, page,
+							pageSize);
+					model.addAttribute("info", info);
+				} else {
+					// 分类文章和文章分类
+					// 显示分类文章
+					// 1查询出来栏目下分类
+					List<Category> categorys = categoryService
+							.selectsByChannelId(article.getChannelId());
+					model.addAttribute("categorys", categorys);
+					// 2.显示分类下的文章
+					PageInfo<Article> info = articleService.selects(article, page,
+							pageSize);
+					model.addAttribute("info", info);
+				}
 			}
 		});
 
@@ -183,6 +216,25 @@ public class IndexController {
 	public String article(Model model, @RequestParam(defaultValue = "1") Integer pageNum,
 			@RequestParam(defaultValue = "3") Integer pageSize, Integer id,
 			HttpServletRequest request) {
+		// 获取远程ip
+		String ip = request.getRemoteAddr();
+		String key = "Hits_" + id + "_" + ip;
+		// 判断redis中是否存在key
+		if (!redisTemplate.hasKey(key)) {
+			executor.execute(() -> {
+				// 在mysql中hits = hits+1,防止线程安全问题
+				articleService.updateHits(id);
+				redisTemplate.opsForValue().set(key, null, 5, TimeUnit.MINUTES);
+			});
+		}
+		try {
+			Thread.sleep(200L);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		//B卷kafka添加
+		//kafkaTemplate.sendDefault("article_Hits", id+"");
+		
 		ArticleWithBLOBs article = articleService.selectByPrimaryKey(id);
 		// 评论
 		PageInfo<Comment> commentInfo = commentService.selects(article.getId(), pageNum,
