@@ -1,15 +1,11 @@
 package com.caoyuan.cms.controller;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,9 +32,7 @@ import com.caoyuan.cms.utils.ArticleEnum;
 import com.caoyuan.cms.utils.Result;
 import com.caoyuan.cms.utils.ResultUtil;
 import com.caoyuan.cms.vo.ArticleVO;
-import com.cy.util.StringUtil;
 import com.github.pagehelper.PageInfo;
-import com.google.gson.Gson;
 
 /**
  * @ClassName:   IndexController
@@ -62,16 +56,7 @@ public class IndexController {
 	private CollectService collectService;// 收藏
 
 	@Resource
-	private CommentService commentService;
-
-	@Resource
-	private ThreadPoolTaskExecutor executor;// 开启线程池
-
-	@Resource
-	private RedisTemplate<String, ?> redisTemplate;// 储存点击量的key(string类型)
-
-	@Resource
-	private KafkaTemplate<String, String> kafkaTemplate;// kafka消息队列处理数据库点击量+1
+	private CommentService commentService;// 评论
 
 	/**
 	 * 
@@ -108,37 +93,27 @@ public class IndexController {
 
 		// 热门文章
 		t2 = new Thread(() -> {
-			// 判断中间区域是高亮搜索还是热门
-			if (StringUtil.hasText(key)) {
-				// 如果搜索条件不为空，则查询es，进行高亮显示
-				PageInfo<Article> info = articleService.selectEs(key, page, pageSize);
+			// 如果搜索条件为空，则显示热门文章
+			// 如果栏目为空则默认显示热点
+			if (article.getChannelId() == null) {
+				// 查询热点文章的列表
+				Article hot = new Article();
+				hot.setStatus(1);// 审核过的
+				hot.setHot(1);// 热点文章
+				hot.setDeleted(0);// 未删除
+				hot.setContentType(ArticleEnum.HTML.getCode());
+				PageInfo<Article> info = articleService.selectHot(hot, page, pageSize);
 				model.addAttribute("info", info);
-				model.addAttribute("key", key);
 			} else {
-				// 如果搜索条件为空，则显示热门文章
-				// 如果栏目为空则默认显示热点
-				if (article.getChannelId() == null) {
-					// 查询热点文章的列表
-					Article hot = new Article();
-					hot.setStatus(1);// 审核过的
-					hot.setHot(1);// 热点文章
-					hot.setDeleted(0);// 未删除
-					hot.setContentType(ArticleEnum.HTML.getCode());
-					PageInfo<Article> info = articleService.selectHot(hot, page,
-							pageSize);
-					model.addAttribute("info", info);
-				} else {
-					// 分类文章和文章分类
-					// 显示分类文章
-					// 1查询出来栏目下分类
-					List<Category> categorys = categoryService
-							.selectsByChannelId(article.getChannelId());
-					model.addAttribute("categorys", categorys);
-					// 2.显示分类下的文章
-					PageInfo<Article> info = articleService.selects(article, page,
-							pageSize);
-					model.addAttribute("info", info);
-				}
+				// 分类文章和文章分类
+				// 显示分类文章
+				// 1查询出来栏目下分类
+				List<Category> categorys = categoryService
+						.selectsByChannelId(article.getChannelId());
+				model.addAttribute("categorys", categorys);
+				// 2.显示分类下的文章
+				PageInfo<Article> info = articleService.selects(article, page, pageSize);
+				model.addAttribute("info", info);
 			}
 		});
 
@@ -209,30 +184,6 @@ public class IndexController {
 			@RequestParam(defaultValue = "3") Integer pageSize, Integer id,
 			HttpServletRequest request) {
 		ArticleWithBLOBs article = articleService.selectByPrimaryKey(id);
-		// A卷：为CMS系统文章最终页（详情页），每访问一次就同时往文章表的浏览量字段加1，
-		// 如果一篇文章集中一时刻上百万次浏览，就会给数据库造成压力。现在请你利用Redis提高性能，
-		// 当用户浏览文章时，将“Hits_${文章ID}_${用户IP地址}”为key，
-		// 查询Redis里有没有该key，如果有key，则不做任何操作。如果没有，
-		// 则使用Spring线程池异步执行数据库加1操作，并往Redis保存key为Hits_${文章ID}_${用户IP地址}，
-		// value为空值的记录，而且有效时长为5分钟。
-
-		// 获取远程请求对象的ip地址
-		String ip = request.getRemoteAddr();
-		String key = "Hits_" + id + "_" + ip;
-		// 如果redis中没这个key,证明5分钟内这个用户是第一次点击
-		if (!redisTemplate.hasKey(key)) {
-			// 使用Spring线程池
-			executor.execute(() -> {
-				// 点击量+1,这里使用mysql中+1,能避免线程安全问题
-				articleService.updateHits(id);
-				// 在redis中添加key,5分钟内再点击,不计算点击量
-				redisTemplate.opsForValue().set(key, null, 5, TimeUnit.MINUTES);
-				System.out.println(id + "=====点击量修改成功");
-			});
-		}
-		// B卷要求kafka修改点击量+1
-		// kafkaTemplate.sendDefault("article_updateHits", id+"");
-
 		// 评论
 		PageInfo<Comment> commentInfo = commentService.selects(article.getId(), pageNum,
 				pageSize);

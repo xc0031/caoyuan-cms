@@ -41,22 +41,6 @@ public class ArticleServiceImpl implements ArticleService {
 	@Resource
 	private ElasticsearchTemplate elasticsearchTemplate;
 
-	/**
-	 * 	Es高亮搜索,显示在热门那里
-	 */
-	@Override
-	public PageInfo<Article> selectEs(String key, Integer page, Integer pageSize) {
-		Class[] classes = { User.class, Category.class, Channel.class };
-		AggregatedPage<Article> selectObjects = ESUtils.selectObjects(
-				elasticsearchTemplate, Article.class, Arrays.asList(classes), page,
-				pageSize, "id", new String[] { "title" }, key);
-		List<Article> content = selectObjects.getContent();
-		long totalElements = selectObjects.getTotalElements();
-		Page<Article> page2 = new Page<Article>(page, pageSize);
-		page2.addAll(content);
-		page2.setTotal(totalElements);
-		return new PageInfo<Article>(page2, 5);
-	}
 
 	/**
 	 * 	管理员与用户界面的查询的文章/图片集列表
@@ -145,7 +129,7 @@ public class ArticleServiceImpl implements ArticleService {
 		// 传入总条数
 		pages.setTotal(size);
 		// 放入pageInfo设置数据,为了使用页码导航,第二个参数是页码个数
-		PageInfo<Article> pageInfo = new PageInfo<Article>(pages, 5);
+		PageInfo<Article> pageInfo = new PageInfo<Article>(pages);
 
 		return pageInfo;
 	}
